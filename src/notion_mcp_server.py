@@ -25,6 +25,7 @@ from mcp.types import (
 )
 from notion_client import Client
 from pydantic import BaseModel
+from mcp import ServerCapabilities
 
 # 환경 변수 로드
 load_dotenv()
@@ -208,212 +209,270 @@ class NotionMCPServer:
                     return await self._create_database_entry(arguments)
                 else:
                     return CallToolResult(
-                        content=[TextContent(type="text", text=f"알 수 없는 도구: {name}")],
-                        isError=True
+                        content=[TextContent(type="text", text=f"알 수 없는 도구: {name}", annotations=None)],
+                        isError=True,
+                        _meta=None
                     )
             except Exception as e:
                 logger.error(f"도구 '{name}' 실행 중 오류: {str(e)}")
                 return CallToolResult(
-                    content=[TextContent(type="text", text=f"오류: {str(e)}")],
-                    isError=True
+                    content=[TextContent(type="text", text=f"오류: {str(e)}", annotations=None)],
+                    isError=True,
+                    _meta=None
                 )
     
     async def _search_notion(self, arguments: Dict[str, Any]) -> CallToolResult:
         """Notion에서 검색을 수행합니다"""
-        query = arguments["query"]
-        filter_type = arguments.get("filter_type")
-        
-        search_params = {"query": query}
-        if filter_type:
-            search_params["filter"] = {"value": filter_type, "property": "object"}
-        
-        results = self.notion.search(**search_params)
-        
-        formatted_results = []
-        for result in results["results"]:
-            if result["object"] == "page":
-                title = self._extract_title(result)
-                formatted_results.append({
-                    "id": result["id"],
-                    "type": "page",
-                    "title": title,
-                    "url": result["url"]
-                })
-            elif result["object"] == "database":
-                title = self._extract_title(result)
-                formatted_results.append({
-                    "id": result["id"],
-                    "type": "database",
-                    "title": title,
-                    "url": result["url"]
-                })
-        
-        return CallToolResult(
-            content=[TextContent(
-                type="text",
-                text=f"검색 결과 ({len(formatted_results)}개):\n" + 
-                     json.dumps(formatted_results, ensure_ascii=False, indent=2)
-            )]
-        )
+        try:
+            query = arguments["query"]
+            filter_type = arguments.get("filter_type")
+            
+            search_params = {"query": query}
+            if filter_type:
+                search_params["filter"] = {"value": filter_type, "property": "object"}
+            
+            results = self.notion.search(**search_params)
+            
+            formatted_results = []
+            for result in results["results"]:
+                if result["object"] == "page":
+                    title = self._extract_title(result)
+                    formatted_results.append({
+                        "id": result["id"],
+                        "type": "page",
+                        "title": title,
+                        "url": result["url"]
+                    })
+                elif result["object"] == "database":
+                    title = self._extract_title(result)
+                    formatted_results.append({
+                        "id": result["id"],
+                        "type": "database",
+                        "title": title,
+                        "url": result["url"]
+                    })
+            
+            result_text = f"검색 결과 ({len(formatted_results)}개):\n" + json.dumps(formatted_results, ensure_ascii=False, indent=2)
+            
+            return CallToolResult(
+                content=[TextContent(type="text", text=result_text, annotations=None)],
+                isError=False,
+                _meta=None
+            )
+        except Exception as e:
+            logger.error(f"검색 중 오류: {str(e)}")
+            return CallToolResult(
+                content=[TextContent(type="text", text=f"검색 중 오류가 발생했습니다: {str(e)}", annotations=None)],
+                isError=True,
+                _meta=None
+            )
     
     async def _get_page(self, arguments: Dict[str, Any]) -> CallToolResult:
         """페이지 정보를 가져옵니다"""
-        page_id = arguments["page_id"]
-        
-        page = self.notion.pages.retrieve(page_id)
-        title = self._extract_title(page)
-        
-        page_info = {
-            "id": page["id"],
-            "title": title,
-            "url": page["url"],
-            "created_time": page["created_time"],
-            "last_edited_time": page["last_edited_time"],
-            "properties": page.get("properties", {})
-        }
-        
-        return CallToolResult(
-            content=[TextContent(
-                type="text",
-                text=f"페이지 정보:\n{json.dumps(page_info, ensure_ascii=False, indent=2)}"
-            )]
-        )
+        try:
+            page_id = arguments["page_id"]
+            
+            page = self.notion.pages.retrieve(page_id)
+            title = self._extract_title(page)
+            
+            page_info = {
+                "id": page["id"],
+                "title": title,
+                "url": page["url"],
+                "created_time": page["created_time"],
+                "last_edited_time": page["last_edited_time"],
+                "properties": page.get("properties", {})
+            }
+            
+            result_text = f"페이지 정보:\n{json.dumps(page_info, ensure_ascii=False, indent=2)}"
+            
+            return CallToolResult(
+                content=[TextContent(type="text", text=result_text, annotations=None)],
+                isError=False,
+                _meta=None
+            )
+        except Exception as e:
+            logger.error(f"페이지 조회 중 오류: {str(e)}")
+            return CallToolResult(
+                content=[TextContent(type="text", text=f"페이지 조회 중 오류가 발생했습니다: {str(e)}", annotations=None)],
+                isError=True,
+                _meta=None
+            )
     
     async def _get_page_content(self, arguments: Dict[str, Any]) -> CallToolResult:
         """페이지의 블록 내용을 가져옵니다"""
-        page_id = arguments["page_id"]
-        
-        # 페이지 정보 가져오기
-        page = self.notion.pages.retrieve(page_id)
-        title = self._extract_title(page)
-        
-        # 블록 내용 가져오기
-        blocks = self.notion.blocks.children.list(page_id)
-        content = self._blocks_to_text(blocks["results"])
-        
-        result = f"# {title}\n\n{content}"
-        
-        return CallToolResult(
-            content=[TextContent(type="text", text=result)]
-        )
+        try:
+            page_id = arguments["page_id"]
+            
+            # 페이지 정보 가져오기
+            page = self.notion.pages.retrieve(page_id)
+            title = self._extract_title(page)
+            
+            # 블록 내용 가져오기
+            blocks = self.notion.blocks.children.list(page_id)
+            content = self._blocks_to_text(blocks["results"])
+            
+            result_text = f"# {title}\n\n{content}"
+            
+            return CallToolResult(
+                content=[TextContent(type="text", text=result_text, annotations=None)],
+                isError=False,
+                _meta=None
+            )
+        except Exception as e:
+            logger.error(f"페이지 내용 조회 중 오류: {str(e)}")
+            return CallToolResult(
+                content=[TextContent(type="text", text=f"페이지 내용 조회 중 오류가 발생했습니다: {str(e)}", annotations=None)],
+                isError=True,
+                _meta=None
+            )
     
     async def _create_page(self, arguments: Dict[str, Any]) -> CallToolResult:
         """새로운 페이지를 생성합니다"""
-        parent_id = arguments["parent_id"]
-        title = arguments["title"]
-        content = arguments.get("content", "")
-        
-        # 페이지 생성
-        new_page = self.notion.pages.create(
-            parent={"page_id": parent_id},
-            properties={
-                "title": {
-                    "title": [{"text": {"content": title}}]
-                }
-            }
-        )
-        
-        # 내용이 있으면 블록 추가
-        if content:
-            blocks = self._text_to_blocks(content)
-            if blocks:
-                self.notion.blocks.children.append(
-                    block_id=new_page["id"],
-                    children=blocks
-                )
-        
-        return CallToolResult(
-            content=[TextContent(
-                type="text",
-                text=f"페이지가 성공적으로 생성되었습니다!\n"
-                     f"ID: {new_page['id']}\n"
-                     f"URL: {new_page['url']}"
-            )]
-        )
-    
-    async def _update_page(self, arguments: Dict[str, Any]) -> CallToolResult:
-        """페이지를 업데이트합니다"""
-        page_id = arguments["page_id"]
-        title = arguments.get("title")
-        content = arguments.get("content")
-        
-        # 제목 업데이트
-        if title:
-            self.notion.pages.update(
-                page_id=page_id,
+        try:
+            parent_id = arguments["parent_id"]
+            title = arguments["title"]
+            content = arguments.get("content", "")
+            
+            # 페이지 생성
+            new_page = self.notion.pages.create(
+                parent={"page_id": parent_id},
                 properties={
                     "title": {
                         "title": [{"text": {"content": title}}]
                     }
                 }
             )
-        
-        # 내용 추가
-        if content:
-            blocks = self._text_to_blocks(content)
-            if blocks:
-                self.notion.blocks.children.append(
-                    block_id=page_id,
-                    children=blocks
+            
+            # 내용이 있으면 블록 추가
+            if content:
+                blocks = self._text_to_blocks(content)
+                if blocks:
+                    self.notion.blocks.children.append(
+                        block_id=new_page["id"],
+                        children=blocks
+                    )
+            
+            result_text = f"페이지가 성공적으로 생성되었습니다!\nID: {new_page['id']}\nURL: {new_page['url']}"
+            
+            return CallToolResult(
+                content=[TextContent(type="text", text=result_text, annotations=None)],
+                isError=False,
+                _meta=None
+            )
+        except Exception as e:
+            logger.error(f"페이지 생성 중 오류: {str(e)}")
+            return CallToolResult(
+                content=[TextContent(type="text", text=f"페이지 생성 중 오류가 발생했습니다: {str(e)}", annotations=None)],
+                isError=True,
+                _meta=None
+            )
+    
+    async def _update_page(self, arguments: Dict[str, Any]) -> CallToolResult:
+        """페이지를 업데이트합니다"""
+        try:
+            page_id = arguments["page_id"]
+            title = arguments.get("title")
+            content = arguments.get("content")
+            
+            # 제목 업데이트
+            if title:
+                self.notion.pages.update(
+                    page_id=page_id,
+                    properties={
+                        "title": {
+                            "title": [{"text": {"content": title}}]
+                        }
+                    }
                 )
-        
-        return CallToolResult(
-            content=[TextContent(
-                type="text",
-                text="페이지가 성공적으로 업데이트되었습니다!"
-            )]
-        )
+            
+            # 내용 추가
+            if content:
+                blocks = self._text_to_blocks(content)
+                if blocks:
+                    self.notion.blocks.children.append(
+                        block_id=page_id,
+                        children=blocks
+                    )
+            
+            return CallToolResult(
+                content=[TextContent(type="text", text="페이지가 성공적으로 업데이트되었습니다!", annotations=None)],
+                isError=False,
+                _meta=None
+            )
+        except Exception as e:
+            logger.error(f"페이지 업데이트 중 오류: {str(e)}")
+            return CallToolResult(
+                content=[TextContent(type="text", text=f"페이지 업데이트 중 오류가 발생했습니다: {str(e)}", annotations=None)],
+                isError=True,
+                _meta=None
+            )
     
     async def _query_database(self, arguments: Dict[str, Any]) -> CallToolResult:
         """데이터베이스를 쿼리합니다"""
-        database_id = arguments["database_id"]
-        filter_condition = arguments.get("filter")
-        sorts = arguments.get("sorts")
-        
-        query_params = {"database_id": database_id}
-        if filter_condition:
-            query_params["filter"] = filter_condition
-        if sorts:
-            query_params["sorts"] = sorts
-        
-        results = self.notion.databases.query(**query_params)
-        
-        formatted_results = []
-        for page in results["results"]:
-            title = self._extract_title(page)
-            formatted_results.append({
-                "id": page["id"],
-                "title": title,
-                "url": page["url"],
-                "properties": page.get("properties", {})
-            })
-        
-        return CallToolResult(
-            content=[TextContent(
-                type="text",
-                text=f"데이터베이스 쿼리 결과 ({len(formatted_results)}개):\n" +
-                     json.dumps(formatted_results, ensure_ascii=False, indent=2)
-            )]
-        )
+        try:
+            database_id = arguments["database_id"]
+            filter_condition = arguments.get("filter")
+            sorts = arguments.get("sorts")
+            
+            query_params = {"database_id": database_id}
+            if filter_condition:
+                query_params["filter"] = filter_condition
+            if sorts:
+                query_params["sorts"] = sorts
+            
+            results = self.notion.databases.query(**query_params)
+            
+            formatted_results = []
+            for page in results["results"]:
+                title = self._extract_title(page)
+                formatted_results.append({
+                    "id": page["id"],
+                    "title": title,
+                    "url": page["url"],
+                    "properties": page.get("properties", {})
+                })
+            
+            result_text = f"데이터베이스 쿼리 결과 ({len(formatted_results)}개):\n" + json.dumps(formatted_results, ensure_ascii=False, indent=2)
+            
+            return CallToolResult(
+                content=[TextContent(type="text", text=result_text, annotations=None)],
+                isError=False,
+                _meta=None
+            )
+        except Exception as e:
+            logger.error(f"데이터베이스 쿼리 중 오류: {str(e)}")
+            return CallToolResult(
+                content=[TextContent(type="text", text=f"데이터베이스 쿼리 중 오류가 발생했습니다: {str(e)}", annotations=None)],
+                isError=True,
+                _meta=None
+            )
     
     async def _create_database_entry(self, arguments: Dict[str, Any]) -> CallToolResult:
         """데이터베이스에 새로운 항목을 생성합니다"""
-        database_id = arguments["database_id"]
-        properties = arguments["properties"]
-        
-        new_page = self.notion.pages.create(
-            parent={"database_id": database_id},
-            properties=properties
-        )
-        
-        return CallToolResult(
-            content=[TextContent(
-                type="text",
-                text=f"데이터베이스 항목이 성공적으로 생성되었습니다!\n"
-                     f"ID: {new_page['id']}\n"
-                     f"URL: {new_page['url']}"
-            )]
-        )
+        try:
+            database_id = arguments["database_id"]
+            properties = arguments["properties"]
+            
+            new_page = self.notion.pages.create(
+                parent={"database_id": database_id},
+                properties=properties
+            )
+            
+            result_text = f"데이터베이스 항목이 성공적으로 생성되었습니다!\nID: {new_page['id']}\nURL: {new_page['url']}"
+            
+            return CallToolResult(
+                content=[TextContent(type="text", text=result_text, annotations=None)],
+                isError=False,
+                _meta=None
+            )
+        except Exception as e:
+            logger.error(f"데이터베이스 항목 생성 중 오류: {str(e)}")
+            return CallToolResult(
+                content=[TextContent(type="text", text=f"데이터베이스 항목 생성 중 오류가 발생했습니다: {str(e)}", annotations=None)],
+                isError=True,
+                _meta=None
+            )
     
     def _extract_title(self, page_or_db: Dict[str, Any]) -> str:
         """페이지나 데이터베이스에서 제목을 추출합니다"""
@@ -542,9 +601,8 @@ class NotionMCPServer:
                 InitializationOptions(
                     server_name="notion-mcp-server",
                     server_version="1.0.0",
-                    capabilities=self.server.get_capabilities(
-                        notification_options=None,
-                        experimental_capabilities=None,
+                    capabilities=ServerCapabilities(
+                        tools={}
                     ),
                 ),
             )

@@ -29,33 +29,33 @@ setup:
 # 기본 의존성 설치
 install:
 	@echo "📦 기본 의존성 설치 중..."
-	pip install -r requirements.txt
+	python3 -m pip install -r requirements.txt
 
 # 개발용 의존성 설치
 install-dev:
 	@echo "📦 개발용 의존성 설치 중..."
-	pip install -r requirements-dev.txt
+	python3 -m pip install -r requirements-dev.txt
 
 # 테스트 실행
 test:
 	@echo "🧪 테스트 실행 중..."
-	python -m pytest tests/ -v --cov=src --cov-report=term-missing
+	python3 -m pytest tests/ -v --cov=src --cov-report=term-missing
 
 # 코드 린팅
 lint:
 	@echo "🔍 코드 린팅 중..."
-	flake8 src/ tests/
-	mypy src/
+	python3 -m flake8 src/ tests/
+	python3 -m mypy src/
 
 # 코드 포맷팅
 format:
 	@echo "✨ 코드 포맷팅 중..."
-	black src/ tests/ scripts/
+	python3 -m black src/ tests/ scripts/
 
 # 서버 실행
 run:
 	@echo "🚀 서버 실행 중..."
-	python scripts/run_server.py
+	python3 scripts/run_server.py
 
 # 임시 파일 정리
 clean:
@@ -69,10 +69,10 @@ clean:
 # 패키지 빌드
 build:
 	@echo "📦 패키지 빌드 중..."
-	python setup.py sdist bdist_wheel
+	python3 setup.py sdist bdist_wheel
 
 # 개발 환경 확인
 check:
 	@echo "🔍 개발 환경 확인 중..."
-	@python -c "import sys; print(f'Python 버전: {sys.version}')"
-	@python -c "import os; print(f'NOTION_TOKEN 설정: {\"✅\" if os.getenv(\"NOTION_TOKEN\") else \"❌\"}')" 
+	@python3 -c "import sys; print(f'Python 버전: {sys.version}')"
+	@python3 -c "import os; print(f'NOTION_TOKEN 설정: {\"✅\" if os.getenv(\"NOTION_TOKEN\") else \"❌\"}')" 
