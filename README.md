@@ -57,7 +57,7 @@ Cursor의 설정 파일에 다음을 추가합니다:
 {
   "mcpServers": {
     "notion": {
-      "command": "python",
+      "command": "/path/to/your/notion-mcp-server/venv/bin/python",
       "args": ["/path/to/your/notion-mcp-server/src/notion_mcp_server.py"],
       "env": {
         "NOTION_TOKEN": "your_notion_token_here"
@@ -75,7 +75,7 @@ Claude Desktop의 설정 파일 (`~/Library/Application Support/Claude/claude_de
 {
   "mcpServers": {
     "notion": {
-      "command": "python",
+      "command": "/path/to/your/notion-mcp-server/venv/bin/python",
       "args": ["/path/to/your/notion-mcp-server/src/notion_mcp_server.py"],
       "env": {
         "NOTION_TOKEN": "your_notion_token_here"
