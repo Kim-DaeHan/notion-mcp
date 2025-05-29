@@ -8,7 +8,7 @@ import json
 import os
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
-from src.notion_mcp_server import NotionMCPServer
+from src.mcp_server import NotionMCPServer
 
 
 class TestNotionMCPServer:
