@@ -16,12 +16,15 @@ logger = logging.getLogger(__name__)
 class YouTubeScriptService:
     """유튜브 쇼츠 대본 생성 서비스"""
 
-    def __init__(self, scripts_dir: str = "scripts"):
+    def __init__(
+        self, scripts_dir: str = "~/Documents/workspace/GitHub/notion-mcp/scripts"
+    ):
         """
         Args:
             scripts_dir: 대본 파일을 저장할 디렉토리
         """
-        self.scripts_dir = scripts_dir
+
+        self.scripts_dir = os.path.expanduser(scripts_dir)
 
     def _ensure_scripts_directory(self):
         """스크립트 디렉토리가 존재하지 않으면 생성합니다"""
